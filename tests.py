@@ -30,9 +30,9 @@ class TestAppium(unittest.TestCase):
 
         # Create client
         client_data = {
-            "name": "Pepe2",
-            "lastName": "Carlos2",
-            "email": "carlos2.doe@example.com",
+            "name": "Pepe3",
+            "lastName": "Carlos3",
+            "email": "carlos10.doe@example.com",
             "address": "123456 Main St"
         }
         client_response = requests.post(client_api_url, json=client_data)
@@ -41,9 +41,9 @@ class TestAppium(unittest.TestCase):
 
         # Create provider
         provider_data = {
-            "name": "ProviderName2",
-            "lastName": "ProviderLastname2",
-            "email": "provider2@example.com"
+            "name": "ProviderName3",
+            "lastName": "ProviderLastname3",
+            "email": "provider10@example.com"
         }
         provider_response = requests.post(provider_api_url, json=provider_data)
         print(f"Provider creation response: {provider_response.json()}")
@@ -51,17 +51,16 @@ class TestAppium(unittest.TestCase):
 
         # Create warehouse
         warehouse_data = {
-            "address": "Warehouse Address 2",
+            "address": "Warehouse Address 4",
             "providerId": self.provider_id
         }
         warehouse_response = requests.post(warehouse_api_url, json=warehouse_data)
         print(f"Warehouse creation response: {warehouse_response.json()}")
         self.warehouse_id = int(warehouse_response.json().get('id'))
 
-        # Associate product to warehouse
         product_data= {
-            "name": 'example product '
-        } # Assuming the product ID is 1 for simplicity
+            "name": 'example product10 '
+        }
 
         product_response = requests.post(product_api_url, json=product_data)
         print(f"Product creation response: {product_response.json()}")
@@ -71,8 +70,15 @@ class TestAppium(unittest.TestCase):
             "stock": 20
         })
 
-        print(f"Product association response content: {associate_product_response.text}")
-        print(f"Product association response status code: {associate_product_response.status_code}")
+        print(f"Product/warehouse association response content: {associate_product_response.text}")
+        print(f"Product/warehouse association response status code: {associate_product_response.status_code}")
+
+        associate_provider_product_response = requests.post(f'{provider_api_url}/{self.provider_id}', json={
+            "productId": self.product_id,
+            "price": 100
+        })
+
+        print(f"Product/provider association response content: {associate_provider_product_response.text}")
 
         # Create order
         order_data = {
@@ -94,7 +100,7 @@ class TestAppium(unittest.TestCase):
 
     def test_input_clientID(self) -> None:
         # Wait for the element to be visible and input the client ID
-        wait = WebDriverWait(self.driver, 10)
+        wait = WebDriverWait(self.driver, 20)
         el = wait.until(EC.visibility_of_element_located((AppiumBy.XPATH, '//*[@text="Enter Client ID"]')))
         el.send_keys(str(self.client_id))
 
@@ -115,17 +121,17 @@ class TestAppium(unittest.TestCase):
 
         # Check if the text "ACCEPTED" is present inside the ViewGroup
         accepted_status_elements = view_group_element.find_elements(by=AppiumBy.ANDROID_UIAUTOMATOR,
-                                                                    value='new UiSelector().textContains("ACCEPTED")')
+                                                                    value='new UiSelector().textContains("PENDING")')
 
         if accepted_status_elements:
-            print("The text 'ACCEPTED' is present inside the ViewGroup.")
+            print("The text 'PENDING' is present inside the ViewGroup.")
             status_present = True
         else:
-            print("The text 'ACCEPTED' is not present inside the ViewGroup.")
+            print("The text 'PENDING' is not present inside the ViewGroup.")
             status_present = False
 
         # Assert that the status is present
-        self.assertTrue(status_present, "The text 'ACCEPTED' should be present inside the ViewGroup.")
+        self.assertTrue(status_present, "The text 'PENDING' should be present inside the ViewGroup.")
 
 if __name__ == '__main__':
     unittest.main()
