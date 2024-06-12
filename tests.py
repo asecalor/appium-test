@@ -1,8 +1,11 @@
 import unittest
+import time
 import requests
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 capabilities = dict(
     platformName='Android',
@@ -19,6 +22,7 @@ client_api_url = 'http://localhost:3000/client'
 provider_api_url = 'http://localhost:3000/provider'
 warehouse_api_url = 'http://localhost:3001/warehouse'
 order_api_url = 'http://localhost:3000/order'
+product_api_url = 'http://localhost:3000/product'
 
 class TestAppium(unittest.TestCase):
     def setUp(self) -> None:
@@ -26,66 +30,89 @@ class TestAppium(unittest.TestCase):
 
         # Create client
         client_data = {
-            "name": "John",
-            "lastname": "Doe",
-            "email": "john.doe@example.com",
-            "address": "123 Main St"
+            "name": "Pepe2",
+            "lastName": "Carlos2",
+            "email": "carlos2.doe@example.com",
+            "address": "123456 Main St"
         }
         client_response = requests.post(client_api_url, json=client_data)
-        self.client_id = client_response.json().get('id')
+        print(f"Client creation response: {client_response.json()}")
+        self.client_id = int(client_response.json().get('id'))
 
         # Create provider
         provider_data = {
-            "name": "ProviderName",
-            "lastname": "ProviderLastname",
-            "email": "provider@example.com"
+            "name": "ProviderName2",
+            "lastName": "ProviderLastname2",
+            "email": "provider2@example.com"
         }
         provider_response = requests.post(provider_api_url, json=provider_data)
-        self.provider_id = provider_response.json().get('id')
+        print(f"Provider creation response: {provider_response.json()}")
+        self.provider_id = int(provider_response.json().get('id'))
 
         # Create warehouse
         warehouse_data = {
-            "address": "Warehouse Address",
+            "address": "Warehouse Address 2",
             "providerId": self.provider_id
         }
         warehouse_response = requests.post(warehouse_api_url, json=warehouse_data)
-        self.warehouse_id = warehouse_response.json().get('id')
+        print(f"Warehouse creation response: {warehouse_response.json()}")
+        self.warehouse_id = int(warehouse_response.json().get('id'))
 
         # Associate product to warehouse
-        product_id = 1  # Assuming the product ID is 1 for simplicity
-        requests.post(f'{warehouse_api_url}/{self.warehouse_id}', json= {
-            "productId": 1,
+        product_data= {
+            "name": 'example product '
+        } # Assuming the product ID is 1 for simplicity
+
+        product_response = requests.post(product_api_url, json=product_data)
+        print(f"Product creation response: {product_response.json()}")
+        self.product_id = int(product_response.json().get('id'))
+        associate_product_response = requests.post(f'{warehouse_api_url}/{self.warehouse_id}', json={
+            "productId": self.product_id,
             "stock": 20
         })
+
+        print(f"Product association response content: {associate_product_response.text}")
+        print(f"Product association response status code: {associate_product_response.status_code}")
+
         # Create order
         order_data = {
             "clientId": self.client_id,
             "providerId": self.provider_id,
             "products": [
                 {
-                    "productId": product_id,
+                    "productId": self.product_id,
                     "quantity": 1
                 }
             ]
         }
         self.order_response = requests.post(order_api_url, json=order_data)
+        print(f"Order creation response: {self.order_response.json()}")
 
     def tearDown(self) -> None:
         if self.driver:
             self.driver.quit()
 
     def test_input_clientID(self) -> None:
-        # Find the element and input the client ID
-        el = self.driver.find_element(by=AppiumBy.XPATH, value='//*[@text="Enter Client ID"]')
+        # Wait for the element to be visible and input the client ID
+        wait = WebDriverWait(self.driver, 10)
+        el = wait.until(EC.visibility_of_element_located((AppiumBy.XPATH, '//*[@text="Enter Client ID"]')))
         el.send_keys(str(self.client_id))
+
+        # Add a short wait to allow input processing
+        time.sleep(2)
 
         # Verify if the text "Status: ACCEPTED" is present
         self.get_order_status()
 
     def get_order_status(self) -> None:
-        # Find the ViewGroup element
-        view_group_element = self.driver.find_element(by=AppiumBy.ANDROID_UIAUTOMATOR,
-                                                      value='new UiSelector().className("android.view.ViewGroup").instance(9)')
+        # Wait for the ViewGroup element
+        wait = WebDriverWait(self.driver, 10)
+        view_group_element = wait.until(EC.presence_of_element_located((AppiumBy.ANDROID_UIAUTOMATOR,
+                                                                        'new UiSelector().className("android.view.ViewGroup").instance(9)')))
+
+        # Add a short wait to ensure all elements inside the ViewGroup are loaded
+        time.sleep(2)
+
         # Check if the text "ACCEPTED" is present inside the ViewGroup
         accepted_status_elements = view_group_element.find_elements(by=AppiumBy.ANDROID_UIAUTOMATOR,
                                                                     value='new UiSelector().textContains("ACCEPTED")')
